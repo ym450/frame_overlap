@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.stats import poisson
 
-def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200, pulse_height=1.0):
+def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200, pulse_height=1.0, method="simple"):
     """
     Generate a kernel with non-overlapping rectangular pulses for signal convolution.
 
@@ -18,6 +18,8 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         Duration of each pulse in microseconds (default: 200).
     pulse_height : float, optional
         Amplitude of each pulse (default: 1.0).
+    method : str, optional
+        Method for pulse generation ("simple" or "poisson"). Default is "simple".
 
     Returns
     -------
