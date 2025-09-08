@@ -2,3 +2,4 @@ build/*
 src/frame_overlap.egg-info
 notebooks/.ipynb_checkpoints
 tests/__pycache__
+notebooks/frame_overlap_tutorial_tsviki.ipynb
