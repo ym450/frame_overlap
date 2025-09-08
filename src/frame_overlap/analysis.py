@@ -59,21 +59,30 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     if total_pulse_space > len(t_kernel):
         raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
     
-    available_indices = list(range(len(t_kernel) - pulse_length + 1))
-    start_indices = []
+    if method == "poisson":
+        available_indices = list(range(len(t_kernel) - pulse_length + 1))
+        start_indices = []
     
-    for _ in range(n_pulses):
-        if not available_indices:
-            raise ValueError("Not enough space for non-overlapping pulses")
-        start_idx = np.random.choice(available_indices)
-        start_indices.append(start_idx)
-        overlap_range = range(max(0, start_idx - pulse_length + 1), min(len(t_kernel) - pulse_length + 1, start_idx + pulse_length))
-        available_indices = [idx for idx in available_indices if idx not in overlap_range]
+        for _ in range(n_pulses):
+            if not available_indices:
+                raise ValueError("Not enough space for non-overlapping pulses")
+            start_idx = np.random.choice(available_indices)
+            start_indices.append(start_idx)
+            overlap_range = range(max(0, start_idx - pulse_length + 1), min(len(t_kernel) - pulse_length + 1, start_idx + pulse_length))
+            available_indices = [idx for idx in available_indices if idx not in overlap_range]
     
-    start_indices.sort()
-    for start_idx in start_indices:
-        kernel[start_idx:start_idx + pulse_length] = pulse_height
+        start_indices.sort()
+        for start_idx in start_indices:
+            kernel[start_idx:start_idx + pulse_length] = pulse_height
     
+    if method == "simple":
+        spacing = (len(t_kernel) - total_pulse_space) // (n_pulses + 1)
+        if spacing < 0:
+            raise ValueError("Not enough space for non-overlapping pulses with given parameters")
+        
+        for i in range(n_pulses):
+            start_idx = spacing * (i + 1) + pulse_length * i
+            kernel[start_idx:start_idx + pulse_length] = pulse_height
     return t_kernel, kernel
 
 def wiener_deconvolution(observed, kernel, noise_power=0.01):
