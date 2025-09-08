@@ -81,7 +81,7 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
             raise ValueError("Not enough space for non-overlapping pulses with given parameters")
         
         for i in range(n_pulses):
-            start_idx = spacing * (i + 1) + pulse_length * i
+            start_idx = spacing * i
             kernel[start_idx:start_idx + pulse_length] = pulse_height
     return t_kernel, kernel
 
