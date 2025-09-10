@@ -56,10 +56,11 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     pulse_length = int(pulse_duration / bin_width)
     total_pulse_space = n_pulses * pulse_length
     
-    if total_pulse_space > len(t_kernel):
-        raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
+    
     
     if method == "poisson":
+        if total_pulse_space > len(t_kernel):
+            raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
         available_indices = list(range(len(t_kernel) - pulse_length + 1))
         start_indices = []
     
@@ -76,6 +77,8 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
             kernel[start_idx:start_idx + pulse_length] = pulse_height
     
     if method == "simple":
+        if total_pulse_space > len(t_kernel):
+            raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
         spacing = (len(t_kernel) - total_pulse_space) // (n_pulses + 1)
         if spacing < 0:
             raise ValueError("Not enough space for non-overlapping pulses with given parameters")
