@@ -9,7 +9,7 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     Parameters
     ----------
     n_pulses : int
-        Number of pulses in the kernel.
+        Number of pulses in the kernel. When single pulse is desired, set n_pulses to the start index of the pulse.
     window_size : int, optional
         Total size of the kernel window in microseconds (default: 5000).
     bin_width : float, optional
@@ -80,9 +80,16 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         if spacing < 0:
             raise ValueError("Not enough space for non-overlapping pulses with given parameters")
         
-        for i in range(n_pulses):
-            start_idx = spacing * i
+        for _ in range(n_pulses):
+            start_idx = spacing * _
             kernel[start_idx:start_idx + pulse_length] = pulse_height
+    
+    if method == "single":
+        if n_pulses > len(t_kernel) + pulse_length:
+            raise ValueError("Not enough space for the single pulse with given parameters")
+        #     raise ValueError("For 'single' method, n_pulses must be 1")
+        start_idx = n_pulses - 1
+        kernel[start_idx:start_idx + pulse_length] = pulse_height
     return t_kernel, kernel
 
 def wiener_deconvolution(observed, kernel, noise_power=0.01):
