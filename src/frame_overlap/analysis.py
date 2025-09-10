@@ -2,14 +2,14 @@ import numpy as np
 from scipy import signal
 from scipy.stats import poisson
 
-def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200, pulse_height=1.0):
+def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200, pulse_height=1.0, method="simple"):
     """
     Generate a kernel with non-overlapping rectangular pulses for signal convolution.
 
     Parameters
     ----------
     n_pulses : int
-        Number of pulses in the kernel.
+        Number of pulses in the kernel. When single pulse is desired, set n_pulses to the start index of the pulse.
     window_size : int, optional
         Total size of the kernel window in microseconds (default: 5000).
     bin_width : float, optional
@@ -18,6 +18,8 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         Duration of each pulse in microseconds (default: 200).
     pulse_height : float, optional
         Amplitude of each pulse (default: 1.0).
+    method : str, optional
+        Method for pulse generation ("simple" or "poisson"). Default is "simple".
 
     Returns
     -------
@@ -54,22 +56,40 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     pulse_length = int(pulse_duration / bin_width)
     total_pulse_space = n_pulses * pulse_length
     
-    if total_pulse_space > len(t_kernel):
-        raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
+    if method == "poisson":
+        if total_pulse_space > len(t_kernel):
+            raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
+        available_indices = list(range(len(t_kernel) - pulse_length + 1))
+        start_indices = []
     
-    available_indices = list(range(len(t_kernel) - pulse_length + 1))
-    start_indices = []
+        for _ in range(n_pulses):
+            if not available_indices:
+                raise ValueError("Not enough space for non-overlapping pulses")
+            start_idx = np.random.choice(available_indices)
+            start_indices.append(start_idx)
+            overlap_range = range(max(0, start_idx - pulse_length + 1), min(len(t_kernel) - pulse_length + 1, start_idx + pulse_length))
+            available_indices = [idx for idx in available_indices if idx not in overlap_range]
     
-    for _ in range(n_pulses):
-        if not available_indices:
-            raise ValueError("Not enough space for non-overlapping pulses")
-        start_idx = np.random.choice(available_indices)
-        start_indices.append(start_idx)
-        overlap_range = range(max(0, start_idx - pulse_length + 1), min(len(t_kernel) - pulse_length + 1, start_idx + pulse_length))
-        available_indices = [idx for idx in available_indices if idx not in overlap_range]
+        start_indices.sort()
+        for start_idx in start_indices:
+            kernel[start_idx:start_idx + pulse_length] = pulse_height
     
-    start_indices.sort()
-    for start_idx in start_indices:
+    if method == "simple":
+        if total_pulse_space > len(t_kernel):
+            raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
+        spacing = (len(t_kernel) - total_pulse_space) // (n_pulses + 1)
+        if spacing < 0:
+            raise ValueError("Not enough space for non-overlapping pulses with given parameters")
+        
+        for _ in range(n_pulses):
+            start_idx = spacing * _
+            kernel[start_idx:start_idx + pulse_length] = pulse_height
+    
+    if method == "single":
+        if n_pulses > len(t_kernel) + pulse_length:
+            raise ValueError("Not enough space for the single pulse with given parameters")
+        #     raise ValueError("For 'single' method, n_pulses must be 1")
+        start_idx = n_pulses - 1
         kernel[start_idx:start_idx + pulse_length] = pulse_height
     
     return t_kernel, kernel
