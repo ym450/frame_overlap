@@ -56,8 +56,6 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     pulse_length = int(pulse_duration / bin_width)
     total_pulse_space = n_pulses * pulse_length
     
-    
-    
     if method == "poisson":
         if total_pulse_space > len(t_kernel):
             raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
@@ -82,17 +80,18 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         spacing = (len(t_kernel) - total_pulse_space) // (n_pulses + 1)
         if spacing < 0:
             raise ValueError("Not enough space for non-overlapping pulses with given parameters")
-        
-        for _ in range(n_pulses):
+        pulse_init = n_pulses // bin_width
+        for _ in range(pulse_init):
             start_idx = spacing * _
             kernel[start_idx:start_idx + pulse_length] = pulse_height
     
     if method == "single":
-        if n_pulses > len(t_kernel) + pulse_length:
+        if (n_pulses + pulse_length) > len(t_kernel) + pulse_length:
             raise ValueError("Not enough space for the single pulse with given parameters")
         #     raise ValueError("For 'single' method, n_pulses must be 1")
-        start_idx = n_pulses - 1
+        start_idx = n_pulses
         kernel[start_idx:start_idx + pulse_length] = pulse_height
+    
     return t_kernel, kernel
 
 def wiener_deconvolution(observed, kernel, noise_power=0.01):
