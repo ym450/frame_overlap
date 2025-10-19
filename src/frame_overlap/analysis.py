@@ -52,27 +52,28 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
     
     t_kernel = np.arange(0, window_size, bin_width, dtype=float)
     kernel = np.zeros_like(t_kernel, dtype=float)
+    slim_kernel = np.zeros_like(t_kernel, dtype=float)
     
     pulse_length = pulse_duration // bin_width
     total_pulse_space = n_pulses * pulse_length
     
-    if method == "complex":
-        if total_pulse_space > len(t_kernel):
-            raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
-        available_indices = list(range(len(t_kernel) - pulse_length + 1))
-        start_indices = []
-        pulse_lens = [np.random.randint(1, pulse_length) for _ in range(n_pulses)]
-        for _, pulse_len in zip(range(n_pulses), pulse_lens):
-            if not available_indices:
-                raise ValueError("Not enough space for non-overlapping pulses")
-            start_idx = np.random.choice(available_indices)
-            start_indices.append(start_idx)
-            overlap_range = range(max(0, start_idx - pulse_len + 1), min(len(t_kernel) - pulse_len + 1, start_idx + pulse_len))
-            available_indices = [idx for idx in available_indices if idx not in overlap_range]
+    # if method == "complex":
+    #     if total_pulse_space > len(t_kernel):
+    #         raise ValueError(f"Total pulse space ({total_pulse_space * bin_width} µs) exceeds window size ({window_size} µs)")
+    #     available_indices = list(range(len(t_kernel) - pulse_length + 1))
+    #     start_indices = []
+    #     pulse_lens = [np.random.randint(1, pulse_length) for _ in range(n_pulses)]
+    #     for _, pulse_len in zip(range(n_pulses), pulse_lens):
+    #         if not available_indices:
+    #             raise ValueError("Not enough space for non-overlapping pulses")
+    #         start_idx = np.random.choice(available_indices)
+    #         start_indices.append(start_idx)
+    #         overlap_range = range(max(0, start_idx - pulse_len + 1), min(len(t_kernel) - pulse_len + 1, start_idx + pulse_len))
+    #         available_indices = [idx for idx in available_indices if idx not in overlap_range]
     
-        start_indices.sort()
-        for start_idx, pulse_len in zip(start_indices, pulse_lens):
-            kernel[start_idx:start_idx + pulse_len] = pulse_height
+    #     start_indices.sort()
+    #     for start_idx, pulse_len in zip(start_indices, pulse_lens):
+    #         kernel[start_idx:start_idx + pulse_len] = pulse_height
     
     if method == "poisson":
         if total_pulse_space > len(t_kernel):
@@ -91,6 +92,7 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         start_indices.sort()
         for start_idx in start_indices:
             kernel[start_idx:start_idx + pulse_length] = pulse_height
+            slim_kernel[start_idx] = pulse_height
     
     if method == "simple":
         if total_pulse_space > len(t_kernel):
@@ -103,6 +105,7 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         for _ in range(n_pulses):
             start_idx = spacer * _
             kernel[start_idx:start_idx + pulse_length] = pulse_height
+            slim_kernel[start_idx] = pulse_height
     
     if method == "single":
         if (n_pulses // bin_width + pulse_length) > len(t_kernel) + pulse_length:
@@ -110,8 +113,9 @@ def generate_kernel(n_pulses, window_size=5000, bin_width=10, pulse_duration=200
         #     raise ValueError("For 'single' method, n_pulses must be 1")
         start_idx = n_pulses // bin_width
         kernel[start_idx:start_idx + pulse_length] = pulse_height
+        slim_kernel[start_idx] = pulse_height
     
-    return t_kernel, kernel
+    return t_kernel, kernel, slim_kernel
 
 def wiener_deconvolution(observed, kernel, noise_power=0.01):
     """
@@ -166,7 +170,7 @@ def wiener_deconvolution(observed, kernel, noise_power=0.01):
     x_est = np.real(np.fft.ifft(X_est))
     return x_est
 
-def apply_filter(signal, kernel, filter_type='wiener', stats_fraction=0.2, noise_power=0.01):
+def apply_filter(signal, kernel, slim_kernel, filter_type='wiener', stats_fraction=0.2, noise_power=0.01):
     """
     Apply a filter to a signal with Poisson sampling.
 
@@ -176,6 +180,8 @@ def apply_filter(signal, kernel, filter_type='wiener', stats_fraction=0.2, noise
         Input signal to be filtered.
     kernel : array-like
         Kernel for convolution.
+    slim_kernel : array-like
+        Slim version of the kernel for the deconvolution.
     filter_type : str, optional
         Type of filter to apply (default: 'wiener').
     stats_fraction : float, optional
@@ -213,7 +219,7 @@ def apply_filter(signal, kernel, filter_type='wiener', stats_fraction=0.2, noise
         raise ValueError("stats_fraction must be between 0 and 1")
     if noise_power <= 0:
         raise ValueError("noise_power must be positive")
-    if np.any(np.isnan(signal)) or np.any(np.isnan(kernel)):
+    if np.any(np.isnan(signal)) or np.any(np.isnan(kernel)) or np.any(np.isnan(slim_kernel)):
         raise ValueError("Input arrays must not contain NaN values")
 
     observed = np.convolve(signal, kernel, mode='full')[:len(signal)]
@@ -222,7 +228,7 @@ def apply_filter(signal, kernel, filter_type='wiener', stats_fraction=0.2, noise
     observed_poisson = np.clip(observed_poisson, 1, None)
     
     if filter_type.lower() == 'wiener':
-        reconstructed = wiener_deconvolution(observed_poisson, kernel, noise_power=noise_power)
+        reconstructed = wiener_deconvolution(observed_poisson, slim_kernel, noise_power=noise_power)
     else:
         raise ValueError(f"Filter type '{filter_type}' not supported. Use 'wiener'.")
     
