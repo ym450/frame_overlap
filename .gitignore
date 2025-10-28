@@ -5,11 +5,8 @@ tests/__pycache__
 notebooks/Cellulose_C6O5H10.ncmat
 notebooks/Fe_sg229_Iron-alpha_CrysExtn1.ncmat
 notebooks/Fe_sg229_Iron-alpha_CrysExtn1(1).ncmat
-notebooks/fit_results_24hrs_saraf_xs0_groups3_single1_1000.csv
-notebooks/fit_results_24hrs_saraf_xs0_groups3_simple1_1000.csv
-notebooks/fit_results_24hrs_saraf_xs0_groups5_single_200.csv
-notebooks/fit_results_24hrs_saraf_xs0_groups5_simple_200.csv
-notebooks/fit_results_24hrs_saraf_xs0_groups5_poisson_200.csv
+notebooks/frame_overlap_analysis*
+notebooks/FOBI_code.py
 results/*
 
 
